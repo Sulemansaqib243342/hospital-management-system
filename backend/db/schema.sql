@@ -119,3 +119,11 @@ INSERT INTO departments (dept_name, description) VALUES ('Neurology', 'Brain and
 INSERT INTO departments (dept_name, description) VALUES ('ICU', 'Intensive Care Unit');
 
 COMMIT;
+
+CREATE USER hms_user IDENTIFIED BY hms_password;
+GRANT CONNECT, RESOURCE, DBA TO hms_user;
+
+INSERT INTO staff (full_name, email, password, role)
+VALUES ('Admin User', 'admin@hospital.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'admin');
+
+COMMIT;
