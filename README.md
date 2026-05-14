@@ -97,4 +97,4 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 [GitHub Profile](https://github.com/Sulemansaqib243342) | [LinkedIn](https://www.linkedin.com/in/sulemansaqib)
 
 ---
-*Developed as a Final Year Project for SS Pharmaceuticals.*
+*Developed as a Semester Project for SS Pharmaceuticals.*
