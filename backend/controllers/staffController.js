@@ -62,14 +62,35 @@ exports.getStaffById = async (req, res) => {
 };
 
 exports.updateStaff = async (req, res) => {
-  const { full_name, phone, designation, shift, status } = req.body;
+  const { full_name, email, role, phone, designation, dept_id, shift, status, password } = req.body;
   let conn;
   try {
     conn = await getConnection();
+    // If password provided, hash it (simple placeholder – real hashing should be done elsewhere)
+    const pwdClause = password ? `, password = :password` : '';
     await conn.execute(
-      `UPDATE staff SET full_name=:full_name, phone=:phone, designation=:designation,
-       shift=:shift, status=:status WHERE staff_id=:id`,
-      { full_name, phone, designation, shift, status, id: req.params.id },
+      `UPDATE staff SET 
+        full_name = NVL(:full_name, full_name),
+        email = NVL(:email, email),
+        role = NVL(:role, role),
+        phone = NVL(:phone, phone),
+        designation = NVL(:designation, designation),
+        dept_id = NVL(:dept_id, dept_id),
+        shift = NVL(:shift, shift),
+        status = NVL(:status, status)${pwdClause}
+       WHERE staff_id = :id`,
+      {
+        full_name,
+        email,
+        role,
+        phone,
+        designation,
+        dept_id,
+        shift,
+        status,
+        ...(password ? { password } : {}),
+        id: req.params.id
+      },
       { autoCommit: true }
     );
     res.json({ message: 'Staff updated successfully' });
@@ -79,6 +100,7 @@ exports.updateStaff = async (req, res) => {
     if (conn) await conn.close();
   }
 };
+
 
 exports.deleteStaff = async (req, res) => {
   let conn;

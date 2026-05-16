@@ -60,16 +60,34 @@ exports.createPatient = async (req, res) => {
 };
 
 exports.updatePatient = async (req, res) => {
-  const { full_name, phone, email, address } = req.body;
+  const { full_name, dob, gender, blood_group, phone, email, address, emergency_contact } = req.body;
   let conn;
   try {
     conn = await getConnection();
     await conn.execute(
-      `UPDATE patients SET full_name=:full_name, phone=:phone, email=:email, address=:address
-       WHERE patient_id=:id`,
-      { full_name, phone, email, address, id: req.params.id },
-      { autoCommit: true }
-    );
+  `UPDATE patients SET 
+    full_name = NVL(:full_name, full_name),
+    dob = CASE WHEN :dob IS NOT NULL THEN TO_DATE(:dob, 'YYYY-MM-DD') ELSE dob END,
+    gender = NVL(:gender, gender),
+    blood_group = NVL(:blood_group, blood_group),
+    phone = NVL(:phone, phone),
+    email = NVL(:email, email),
+    address = NVL(:address, address),
+    emergency_contact = NVL(:emergency_contact, emergency_contact)
+   WHERE patient_id = :id`,
+  {
+    full_name,
+    dob,
+    gender,
+    blood_group,
+    phone,
+    email,
+    address,
+    emergency_contact,
+    id: req.params.id
+  },
+  { autoCommit: true }
+);
     res.json({ message: 'Patient updated successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -77,6 +95,7 @@ exports.updatePatient = async (req, res) => {
     if (conn) await conn.close();
   }
 };
+
 
 exports.deletePatient = async (req, res) => {
   let conn;

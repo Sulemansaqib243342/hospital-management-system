@@ -1,6 +1,5 @@
 -- =============================================
 -- HOSPITAL MANAGEMENT SYSTEM - ORACLE SCHEMA
--- Run this in SQL Developer
 -- =============================================
 
 -- 1. DEPARTMENTS
@@ -109,7 +108,7 @@ CREATE TABLE billing (
 );
 
 -- =============================================
--- SEED DATA - Sample departments
+-- Departments Sample Data
 -- =============================================
 INSERT INTO departments (dept_name, description) VALUES ('Cardiology', 'Heart related treatments');
 INSERT INTO departments (dept_name, description) VALUES ('General', 'General medicine and OPD');
