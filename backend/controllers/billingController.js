@@ -1,22 +1,36 @@
 const oracledb = require('oracledb');
 const { getConnection } = require('../db/connection');
+const paymentUtils = require('../utils/paymentMethods');
 
 exports.getAllBills = async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
     const result = await conn.execute(
-      `SELECT b.bill_id, b.total_amount, b.paid_amount, b.payment_mode, b.status, b.bill_date, b.notes,
-              p.full_name as patient_name, p.phone as patient_phone,
-              (b.total_amount - b.paid_amount) as balance
-       FROM billing b
-       JOIN patients p ON b.patient_id = p.patient_id
-       ORDER BY b.bill_date DESC`,
+      `SELECT bill_id, total_amount, paid_amount, payment_mode, status, bill_date, notes,
+              patient_name, patient_phone, balance
+       FROM billing_summary_v
+       ORDER BY bill_date DESC`,
       [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    // Attempt fallback using a fresh connection if original connection failed
+    try {
+      if (!conn) conn = await getConnection();
+      const fallback = await conn.execute(
+        `SELECT b.bill_id, b.total_amount, b.paid_amount, b.payment_mode, b.status, b.bill_date, b.notes,
+                p.full_name as patient_name, p.phone as patient_phone,
+                (b.total_amount - NVL(b.paid_amount,0)) as balance
+         FROM billing b
+         JOIN patients p ON b.patient_id = p.patient_id
+         ORDER BY b.bill_date DESC`,
+        [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+      res.json(fallback.rows);
+    } catch (fallbackErr) {
+      res.status(500).json({ message: fallbackErr.message });
+    }
   } finally {
     if (conn) await conn.close();
   }
@@ -47,11 +61,10 @@ exports.createBill = async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
-    const status = paid_amount >= total_amount ? 'paid' : paid_amount > 0 ? 'partial' : 'pending';
     await conn.execute(
-      `INSERT INTO billing (patient_id, admission_id, total_amount, paid_amount, payment_mode, status, notes)
-       VALUES (:patient_id, :admission_id, :total_amount, :paid_amount, :payment_mode, :status, :notes)`,
-      { patient_id, admission_id, total_amount, paid_amount, payment_mode, status, notes },
+      `INSERT INTO billing (patient_id, admission_id, total_amount, paid_amount, payment_mode, notes)
+       VALUES (:patient_id, :admission_id, :total_amount, :paid_amount, :payment_mode, :notes)`,
+      { patient_id, admission_id, total_amount, paid_amount, payment_mode, notes },
       { autoCommit: true }
     );
     res.status(201).json({ message: 'Bill created successfully' });
@@ -62,30 +75,7 @@ exports.createBill = async (req, res) => {
   }
 };
 
-exports.updatePayment = async (req, res) => {
-  const { paid_amount, payment_mode } = req.body;
-  let conn;
-  try {
-    conn = await getConnection();
-    const billRes = await conn.execute(
-      `SELECT total_amount FROM billing WHERE bill_id = :id`,
-      { id: req.params.id },
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
-    const total = billRes.rows[0].TOTAL_AMOUNT;
-    const status = paid_amount >= total ? 'paid' : paid_amount > 0 ? 'partial' : 'pending';
-    await conn.execute(
-      `UPDATE billing SET paid_amount=:paid_amount, payment_mode=:payment_mode, status=:status WHERE bill_id=:id`,
-      { paid_amount, payment_mode, status, id: req.params.id },
-      { autoCommit: true }
-    );
-    res.json({ message: 'Payment updated successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  } finally {
-    if (conn) await conn.close();
-  }
-};
+// Deprecated duplicate updatePayment removed - use the consolidated version below
 
 exports.getDashboardStats = async (req, res) => {
   let conn;
@@ -166,11 +156,10 @@ exports.updateBill = async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
-    const status = paid_amount >= total_amount ? 'paid' : paid_amount > 0 ? 'partial' : 'pending';
     await conn.execute(
-      `UPDATE billing SET total_amount=:total_amount, paid_amount=:paid_amount, payment_mode=:payment_mode, status=:status, notes=:notes
+      `UPDATE billing SET total_amount=:total_amount, paid_amount=:paid_amount, payment_mode=:payment_mode, notes=:notes
        WHERE bill_id=:id`,
-      { total_amount, paid_amount, payment_mode, status, notes, id: req.params.id },
+      { total_amount, paid_amount, payment_mode, notes, id: req.params.id },
       { autoCommit: true }
     );
     res.json({ message: 'Bill updated successfully' });
@@ -204,11 +193,10 @@ exports.updatePayment = async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
-    
-    // Fetch current bill to calculate new paid_amount and status
     const result = await conn.execute(
       `SELECT total_amount, paid_amount FROM billing WHERE bill_id = :bill_id`,
-      { bill_id }, { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { bill_id },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
     );
     
     if (result.rows.length === 0) {

@@ -6,7 +6,7 @@ const statusBadge = (s) => {
   return <span className={`badge ${map[s]||'badge-gray'} capitalize`}>{s}</span>;
 };
 
-const PAYMENT_METHODS = ['cash','card','insurance','online','jazzcash','easypaisa','paypal','stripe'];
+const PAYMENT_METHODS = ['JazzCash', 'EasyPaisa', 'Sadapay', 'Online', 'Insurance'];
 
 export default function Billing() {
   const [bills, setBills] = useState([]);

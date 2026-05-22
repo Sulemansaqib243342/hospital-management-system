@@ -11,15 +11,29 @@ export default function Pharmacy() {
   const [medicines, setMedicines] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [tab, setTab] = useState('inventory');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({ name:'', category:'', unit:'', quantity:0, min_quantity:10, price:0, expiry_date:'', supplier:'' });
   const [saving, setSaving] = useState(false);
 
-  const fetchAll = () => {
-    API.get('/pharmacy/medicines').then(r => { setMedicines(r.data); setLoading(false); });
-    API.get('/pharmacy/prescriptions').then(r => setPrescriptions(r.data));
+  const fetchAll = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [medsRes, rxRes] = await Promise.all([
+        API.get('/pharmacy/medicines'),
+        API.get('/pharmacy/prescriptions').catch(() => ({ data: [] }))
+      ]);
+      setMedicines(Array.isArray(medsRes.data) ? medsRes.data : []);
+      setPrescriptions(Array.isArray(rxRes.data) ? rxRes.data : []);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to load pharmacy data');
+      setMedicines([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchAll(); }, []);
@@ -117,7 +131,18 @@ export default function Pharmacy() {
       </div>
 
       <div className="card">
-        {loading ? <div className="text-center py-10 text-gray-400">Loading...</div> : tab === 'inventory' ? (
+        {loading ? (
+          <div className="text-center py-10 text-gray-400">
+            <div className="animate-spin inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mb-2"></div>
+            <div>Loading medicines...</div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-10">
+            <div className="text-red-500 font-medium mb-2">Failed to load data</div>
+            <div className="text-sm text-gray-500 mb-4">{error}</div>
+            <button className="btn-primary" onClick={fetchAll}>Retry</button>
+          </div>
+        ) : tab === 'inventory' ? (
           <table>
             <thead><tr><th>Medicine</th><th>Category</th><th>Unit</th><th>Quantity</th><th>Min Qty</th><th>Price</th><th>Expiry</th><th>Stock</th><th>Actions</th></tr></thead>
             <tbody>

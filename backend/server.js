@@ -6,7 +6,7 @@ const { initPool } = require('./db/connection');
 
 const app = express();
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: /http:\/\/localhost:\d+/ }));
 app.use(express.json());
 
 // Routes
@@ -24,7 +24,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 initPool()
   .then(() => {

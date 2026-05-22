@@ -123,6 +123,6 @@ CREATE USER hms_user IDENTIFIED BY hms_password;
 GRANT CONNECT, RESOURCE, DBA TO hms_user;
 
 INSERT INTO staff (full_name, email, password, role)
-VALUES ('Admin User', 'admin@hospital.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'admin');
+VALUES ('Admin User', 'sulemansaqib34917@gmail.com', '$2a$10$Z3eTlVSOVA1y8VRkg36dXOb7JLG39CE1nVvbuWIptL5VJgVVNs20m', 'admin');
 
 COMMIT;

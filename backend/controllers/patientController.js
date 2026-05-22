@@ -4,18 +4,26 @@ exports.getAllPatients = async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
-    const result = await conn.execute(
-      `SELECT p.patient_id, p.full_name, p.dob, p.gender, p.blood_group, p.phone, p.email,
-              a.status, a.ward, d.full_name as doctor_name, dep.dept_name
-       FROM patients p
-       LEFT JOIN admissions a ON p.patient_id = a.patient_id AND a.discharge_date IS NULL
-       LEFT JOIN staff d ON a.doctor_id = d.staff_id
-       LEFT JOIN departments dep ON a.dept_id = dep.dept_id
-       ORDER BY p.created_at DESC`,
-      [], { outFormat: require('oracledb').OUT_FORMAT_OBJECT }
-    );
+    let result;
+    try {
+      result = await conn.execute(
+        `SELECT patient_id, full_name, dob, gender, blood_group, phone, email,
+                admission_status as status, ward, doctor_name, dept_name
+         FROM patient_details_v ORDER BY created_at DESC`,
+        [], { outFormat: require('oracledb').OUT_FORMAT_OBJECT }
+      );
+    } catch (viewErr) {
+      console.warn('patient_details_v not found, falling back to patients table:', viewErr.message);
+      result = await conn.execute(
+        `SELECT patient_id, full_name, dob, gender, blood_group, phone, email,
+                address, emergency_contact, created_at
+         FROM patients ORDER BY created_at DESC`,
+        [], { outFormat: require('oracledb').OUT_FORMAT_OBJECT }
+      );
+    }
     res.json(result.rows);
   } catch (err) {
+    console.error('getAllPatients error:', err.message);
     res.status(500).json({ message: err.message });
   } finally {
     if (conn) await conn.close();

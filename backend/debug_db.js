@@ -12,7 +12,7 @@ async function checkUser() {
   try {
     conn = await oracledb.getConnection(dbConfig);
     const result = await conn.execute(
-      `SELECT email, password FROM staff WHERE email = 'admin@hospital.com'`
+      `SELECT email, password FROM staff WHERE email = 'sulemansaqib34917@gmail.com'`
     );
     console.log('User status:', result.rows);
   } catch (err) {

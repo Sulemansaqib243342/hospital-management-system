@@ -24,15 +24,19 @@ export default function Appointments() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [attending, setAttending] = useState(false);
 
+  const [error, setError] = useState('');
+
   const fetchAll = () => {
-    API.get('/appointments').then(r => { setAppts(r.data); setLoading(false); }).catch(()=>setLoading(false));
+    API.get('/appointments')
+      .then(r => { setAppts(r.data); setLoading(false); setError(''); })
+      .catch(err => { console.error(err); setError(err.response?.data?.message || 'Failed to load appointments'); setLoading(false); });
   };
 
   useEffect(() => {
     fetchAll();
-    API.get('/patients').then(r=>setPatients(r.data));
-    API.get('/staff/doctors').then(r=>setDoctors(r.data));
-    API.get('/pharmacy/medicines').then(r=>setMedicines(r.data));
+    API.get('/patients').then(r => setPatients(r.data)).catch(err => console.error(err));
+    API.get('/staff/doctors').then(r => setDoctors(r.data)).catch(err => console.error(err));
+    API.get('/pharmacy/medicines').then(r => setMedicines(r.data)).catch(err => console.error(err));
   }, []);
 
   const handleSubmit = async (e) => {
@@ -190,34 +194,36 @@ export default function Appointments() {
 
       <div className="card">
         {loading ? <div className="text-center py-10 text-gray-400">Loading...</div> : (
-          <table>
-            <thead><tr><th>Patient</th><th>Doctor</th><th>Department</th><th>Date & Time</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
-            <tbody>
-              {appts.map(a => (
-                <tr key={a.APPT_ID}>
-                  <td><div className="font-medium">{a.PATIENT_NAME}</div><div className="text-xs text-gray-400">{a.PATIENT_PHONE}</div></td>
-                  <td>{a.DOCTOR_NAME}</td>
-                  <td>{a.DEPT_NAME}</td>
-                  <td><div>{new Date(a.APPT_DATE).toLocaleDateString()}</div><div className="text-xs text-gray-400">{a.APPT_TIME}</div></td>
-                  <td className="text-gray-600">{a.REASON || '—'}</td>
-                  <td>{statusBadge(a.STATUS)}</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <select className="text-xs border border-gray-200 rounded px-2 py-1 bg-white w-24" value={a.STATUS} onChange={e=>updateStatus(a.APPT_ID,e.target.value)}>
-                        {['scheduled','confirmed','completed','cancelled','missed'].map(s=><option key={s} value={s}>{s}</option>)}
-                      </select>
-                      {(a.STATUS === 'scheduled' || a.STATUS === 'confirmed') && (
-                        <button onClick={()=>openAttendModal(a.APPT_ID)} className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded font-medium">
-                          Attend
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {appts.length===0 && <tr><td colSpan="7" className="text-center py-8 text-gray-400">No appointments found</td></tr>}
-            </tbody>
-          </table>
+          error ? <div className="text-center py-8 text-red-600">{error}</div> : (
+            <table>
+              <thead><tr><th>Patient</th><th>Doctor</th><th>Department</th><th>Date & Time</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody>
+                {appts.map(a => (
+                  <tr key={a.APPT_ID}>
+                    <td><div className="font-medium">{a.PATIENT_NAME}</div><div className="text-xs text-gray-400">{a.PATIENT_PHONE}</div></td>
+                    <td>{a.DOCTOR_NAME}</td>
+                    <td>{a.DEPT_NAME}</td>
+                    <td><div>{new Date(a.APPT_DATE).toLocaleDateString()}</div><div className="text-xs text-gray-400">{a.APPT_TIME}</div></td>
+                    <td className="text-gray-600">{a.REASON || '—'}</td>
+                    <td>{statusBadge(a.STATUS)}</td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <select className="text-xs border border-gray-200 rounded px-2 py-1 bg-white w-24" value={a.STATUS} onChange={e=>updateStatus(a.APPT_ID,e.target.value)}>
+                          {['scheduled','confirmed','completed','cancelled','missed'].map(s=><option key={s} value={s}>{s}</option>)}
+                        </select>
+                        {(a.STATUS === 'scheduled' || a.STATUS === 'confirmed') && (
+                          <button onClick={()=>openAttendModal(a.APPT_ID)} className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded font-medium">
+                            Attend
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {appts.length===0 && <tr><td colSpan="7" className="text-center py-8 text-gray-400">No appointments found</td></tr>}
+              </tbody>
+            </table>
+          )
         )}
       </div>
     </div>

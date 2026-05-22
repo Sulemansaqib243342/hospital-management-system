@@ -31,6 +31,7 @@ export default function Dashboard() {
           <p className="text-sm text-gray-500 mt-0.5">Welcome back · {new Date().toDateString()}</p>
         </div>
         <button className="btn-primary"><i className="ti ti-plus"></i> New Admission</button>
+        <Link to="/" className="btn-secondary ml-2"><i className="ti ti-arrow-left"></i> Back to Site</Link>
       </div>
 
       {loading ? (

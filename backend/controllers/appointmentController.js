@@ -5,19 +5,36 @@ exports.getAllAppointments = async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
-    const result = await conn.execute(
-      `SELECT a.appt_id, a.appt_date, a.appt_time, a.reason, a.status, a.notes,
-              p.full_name as patient_name, p.phone as patient_phone,
-              s.full_name as doctor_name, d.dept_name
-       FROM appointments a
-       JOIN patients p ON a.patient_id = p.patient_id
-       JOIN staff s ON a.doctor_id = s.staff_id
-       JOIN departments d ON a.dept_id = d.dept_id
-       ORDER BY a.appt_date DESC, a.appt_time ASC`,
-      [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
+    let result;
+    try {
+      result = await conn.execute(
+        `SELECT a.appt_id, a.appt_date, a.appt_time, a.reason, a.status, a.notes,
+                p.FULL_NAME AS PATIENT_NAME, p.PHONE AS PATIENT_PHONE,
+                d.FULL_NAME AS DOCTOR_NAME, dept.dept_name AS DEPT_NAME
+         FROM appointments a
+         LEFT JOIN patients p ON a.patient_id = p.PATIENT_ID
+         LEFT JOIN staff d ON a.doctor_id = d.STAFF_ID
+         LEFT JOIN departments dept ON a.dept_id = dept.DEPT_ID
+         ORDER BY a.appt_date DESC, a.appt_time ASC`,
+        [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+    } catch (viewErr) {
+      console.warn('appointment_details_v not found, falling back to appointments table:', viewErr.message);
+      result = await conn.execute(
+        `SELECT a.appt_id, a.appt_date, a.appt_time, a.reason, a.status, a.notes,
+                p.FULL_NAME AS PATIENT_NAME, p.PHONE AS PATIENT_PHONE,
+                d.FULL_NAME AS DOCTOR_NAME, dept.dept_name AS DEPT_NAME
+         FROM appointments a
+         LEFT JOIN patients p ON a.patient_id = p.PATIENT_ID
+         LEFT JOIN staff d ON a.doctor_id = d.STAFF_ID
+         LEFT JOIN departments dept ON a.dept_id = dept.DEPT_ID
+         ORDER BY a.appt_date DESC, a.appt_time ASC`,
+        [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+    }
     res.json(result.rows);
   } catch (err) {
+    console.error('getAllAppointments error:', err.message);
     res.status(500).json({ message: err.message });
   } finally {
     if (conn) await conn.close();
@@ -28,18 +45,30 @@ exports.getTodayAppointments = async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
-    const result = await conn.execute(
-      `SELECT a.appt_id, a.appt_time, a.reason, a.status,
-              p.full_name as patient_name,
-              s.full_name as doctor_name, d.dept_name
-       FROM appointments a
-       JOIN patients p ON a.patient_id = p.patient_id
-       JOIN staff s ON a.doctor_id = s.staff_id
-       JOIN departments d ON a.dept_id = d.dept_id
-       WHERE TRUNC(a.appt_date) = TRUNC(SYSDATE)
-       ORDER BY a.appt_time ASC`,
-      [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
+    let result;
+    try {
+      result = await conn.execute(
+        `SELECT appt_id, appt_time, reason, status,
+                patient_name, doctor_name, dept_name
+         FROM appointment_details_v
+         WHERE TRUNC(appt_date) = TRUNC(SYSDATE)
+         ORDER BY appt_time ASC`,
+        [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+    } catch (viewErr) {
+      // Fallback join query when view is missing
+      result = await conn.execute(
+        `SELECT a.appt_id, a.appt_time, a.reason, a.status,
+                 p.FULL_NAME AS PATIENT_NAME, d.FULL_NAME AS DOCTOR_NAME, dept.dept_name AS DEPT_NAME
+         FROM appointments a
+         LEFT JOIN patients p ON a.patient_id = p.PATIENT_ID
+         LEFT JOIN staff d ON a.doctor_id = d.STAFF_ID
+         LEFT JOIN departments dept ON a.dept_id = dept.DEPT_ID
+         WHERE TRUNC(a.appt_date) = TRUNC(SYSDATE)
+         ORDER BY a.appt_time ASC`,
+        [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+    }
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -16,8 +16,8 @@ A premium, full-stack Hospital Management System designed for **SS Pharmaceutica
 - 📂 **Patient Management** — Full CRUD operations for patient records and history.
 - 📅 **Smart Scheduling** — Efficient appointment booking and doctor availability tracking.
 - 💊 **Pharmacy Suite** — Inventory management with low-stock alerts and digital prescriptions.
-- 💳 **Billing & Invoicing** — Automated invoice generation and payment status tracking.
-- 🏛️ **Oracle Integration** — Powered by Oracle 19c for high-performance relational data management.
+- 💳 **Billing & Invoicing** — Supports JazzCash, EasyPaisa, Sadapay, Online, and Insurance payment methods; status updates automatically.
+- 🏛️ **Oracle PL/SQL Optimization** — Business logic and validation offloaded to Database Views, Stored Procedures (using Cursors), and Triggers with robust PL/SQL Exception Handling.
 
 ---
 
@@ -25,7 +25,7 @@ A premium, full-stack Hospital Management System designed for **SS Pharmaceutica
 
 - **Frontend:** React 18, Vite, Tailwind CSS, React Router, Axios
 - **Backend:** Node.js, Express.js
-- **Database:** Oracle 19c (Relational)
+- **Database:** Oracle 19c (Relational) + PL/SQL (Stored Procedures, Views, Triggers, Cursors)
 - **Security:** JWT + bcryptjs
 - **Icons:** Tabler Icons
 
@@ -56,7 +56,8 @@ hospital-hms/
 ### 1. Database Setup (Oracle 19c)
 1. Open **SQL Developer** and connect to your instance.
 2. Run the schema script: `backend/db/schema.sql`.
-3. Create the dedicated user:
+3. Compile the PL/SQL database objects (Views, Procedures, Cursors, Triggers, Exception Handlers): Run `backend/db/plsql_setup.sql`.
+4. Create the dedicated user:
 ```sql
 CREATE USER hms_user IDENTIFIED BY hms_password;
 GRANT CONNECT, RESOURCE, DBA TO hms_user;
@@ -87,8 +88,8 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 ---
 
 ## 🔑 Default Credentials
-- **Admin Login:** `admin@hospital.com`
-- **Password:** `admin123`
+- **Admin Login:** `sulemansaqib34917@gmail.com`
+- **Password:** `Admin@123`
 
 ---
 

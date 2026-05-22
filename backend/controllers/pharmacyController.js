@@ -5,17 +5,33 @@ exports.getAllMedicines = async (req, res) => {
   let conn;
   try {
     conn = await getConnection();
-    const result = await conn.execute(
-      `SELECT medicine_id, name, category, unit, quantity, min_quantity, price,
-              expiry_date, supplier,
-              CASE WHEN quantity = 0 THEN 'out_of_stock'
-                   WHEN quantity <= min_quantity THEN 'low'
-                   ELSE 'ok' END as stock_status
-       FROM medicines ORDER BY name`,
-      [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
-    );
+    let result;
+    try {
+      // Try the optimized view first
+      result = await conn.execute(
+        `SELECT medicine_id, name, category, unit, quantity, min_quantity, price,
+                expiry_date, supplier, stock_status
+         FROM medicine_inventory_v ORDER BY name`,
+        [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+    } catch (viewErr) {
+      // View not created yet — fall back to base table with inline CASE
+      console.warn('medicine_inventory_v not found, falling back to medicines table:', viewErr.message);
+      result = await conn.execute(
+        `SELECT medicine_id, name, category, unit, quantity, min_quantity, price,
+                expiry_date, supplier,
+                CASE
+                  WHEN quantity = 0 THEN 'out_of_stock'
+                  WHEN quantity <= min_quantity THEN 'low'
+                  ELSE 'ok'
+                END as stock_status
+         FROM medicines ORDER BY name`,
+        [], { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      );
+    }
     res.json(result.rows);
   } catch (err) {
+    console.error('getAllMedicines error:', err.message);
     res.status(500).json({ message: err.message });
   } finally {
     if (conn) await conn.close();
@@ -106,20 +122,16 @@ exports.addPrescription = async (req, res) => {
   try {
     conn = await getConnection();
     await conn.execute(
-      `INSERT INTO prescriptions (patient_id, doctor_id, medicine_id, quantity, dosage, duration)
-       VALUES (:patient_id, :doctor_id, :medicine_id, :quantity, :dosage, :duration)`,
+      `BEGIN
+         sp_add_prescription(:patient_id, :doctor_id, :medicine_id, :quantity, :dosage, :duration);
+       END;`,
       { patient_id, doctor_id, medicine_id, quantity, dosage, duration },
-      { autoCommit: true }
-    );
-    // Deduct from stock
-    await conn.execute(
-      `UPDATE medicines SET quantity = quantity - :quantity WHERE medicine_id = :id`,
-      { quantity, id: medicine_id },
       { autoCommit: true }
     );
     res.status(201).json({ message: 'Prescription added and stock updated' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    const statusCode = err.message.includes('ORA-20') ? 400 : 500;
+    res.status(statusCode).json({ message: err.message });
   } finally {
     if (conn) await conn.close();
   }
